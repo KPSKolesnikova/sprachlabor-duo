@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Sprachlabor">
+  <g transform="rotate(-8 64 64)">
+    <rect x="17.5" y="17.5" width="93" height="93" rx="26" fill="#242d34" stroke="#475949" stroke-width="3"/>
+    <g fill="#e4ff84">
+      <rect x="41" y="41" width="18" height="18" rx="2.5"/>
+      <rect x="69" y="41" width="18" height="18" rx="2.5" opacity=".48"/>
+      <rect x="41" y="69" width="18" height="18" rx="2.5" opacity=".70"/>
+      <rect x="69" y="69" width="18" height="18" rx="2.5"/>
+    </g>
+  </g>
+</svg>

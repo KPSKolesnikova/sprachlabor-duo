@@ -5,9 +5,11 @@ import { books, checkpoints, goethePdfs, levelOrder, levels, sources, week, type
 import { academicDrills } from "../lib/academic";
 import { drills, type Question } from "../lib/drills";
 import { formatDrills } from "../lib/formats";
+import { lessonDrills, lessons, type Lesson } from "../lib/lessons";
 import { diagnostic, dictation, examQuestions, scenePractice } from "../lib/scenes";
 import { allTrackQuestions, missions, trackQuestions, tracks, trackResources, type Track } from "../lib/tracks";
 import { Duo, type Assignment } from "./duo";
+import { LessonCatalog, LessonPage } from "./lessons";
 import { achievements, Cards, Progress, weeklyMinutes } from "./progress";
 import { ExamGuide, Method, VocabularyCoverage } from "./preparation";
 import { Quiz, type Result, type Session } from "./quiz";
@@ -16,25 +18,23 @@ import { Brand, Icon, SectionHead } from "./ui";
 
 const pages = [
   { id: "home", title: "Студия", icon: "home" }, { id: "route", title: "Маршрут", icon: "route" },
+  { id: "lessons", title: "Уроки", icon: "book" },
   { id: "practice", title: "Тренажёр", icon: "practice" }, { id: "cards", title: "Карточки", icon: "cards" },
   { id: "exams", title: "Пробники", icon: "exam" }, { id: "duo", title: "Вдвоём", icon: "duo" },
   { id: "progress", title: "Прогресс", icon: "stats" }, { id: "library", title: "Библиотека", icon: "book" },
 ] as const;
 type Page = typeof pages[number]["id"];
-const practiceQuestions = [...drills, ...scenePractice, ...dictation, ...formatDrills, ...academicDrills];
+const practiceQuestions = [...drills, ...scenePractice, ...dictation, ...formatDrills, ...academicDrills, ...lessonDrills];
 const allQuestions = [...practiceQuestions, ...allTrackQuestions, ...diagnostic, ...levelOrder.flatMap((item) => [...examQuestions(item, "A"), ...examQuestions(item, "B")])];
+const questionsById = new Map(allQuestions.map((item) => [item.id, item]));
 const filters = ["Все", "Grammatik", "Wortschatz", "Lesen", "Hören", "Diktat", "Формат экзамена"] as const;
 type Filter = typeof filters[number];
 const studySkills: Skill[] = ["Grammatik", "Wortschatz", "Lesen", "Hören"];
 
-function pageFromHash(): Page {
-  const key = window.location.hash.slice(1);
-  return pages.find((page) => page.id === key)?.id ?? "home";
-}
-
 export default function Studio({ account }: { account: Account | null }) {
   const state = useStudioState(account);
   const [page, setPage] = useState<Page>("home");
+  const [lessonId, setLessonId] = useState("");
   const [session, setSession] = useState<Session | null>(null);
   const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState<Filter>("Все");
@@ -44,6 +44,7 @@ export default function Studio({ account }: { account: Account | null }) {
   const [workKey, setWorkKey] = useState(0);
   const level = levelOrder.find((item) => item === state.records.level) ?? "A1";
   const track = state.records.track === "media" ? "media" : "data";
+  const lesson = lessons.find((item) => item.id === lessonId);
   const stage = levels[level];
   const mission = missions[track][level];
   const metrics = achievements(state.records);
@@ -54,7 +55,14 @@ export default function Studio({ account }: { account: Account | null }) {
   const visibleBooks = [...books, ...trackResources].filter((book) => (libraryFilter === "Все" || book.category === libraryFilter) && `${book.title} ${book.description} ${book.label}`.toLowerCase().includes(libraryText.trim().toLowerCase()));
 
   useEffect(() => {
-    function onHash() { setPage(pageFromHash()); setSession(null); setMenu(false); }
+    function onHash() {
+      const [key, detail] = window.location.hash.slice(1).split("/");
+      setPage(pages.find((item) => item.id === key)?.id ?? "home");
+      setLessonId(key === "lessons" ? detail ?? "" : "");
+      setSession(null);
+      setMenu(false);
+      if (key === "lessons") window.scrollTo({ top: 0, behavior: "instant" });
+    }
     onHash();
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -64,16 +72,22 @@ export default function Studio({ account }: { account: Account | null }) {
     window.history.pushState(null, "", destination === "home" ? window.location.pathname : `#${destination}`);
     setSession(null);
     setPage(destination);
+    setLessonId("");
     setMenu(false);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
   function setLevel(value: Level) { state.save({ level: value }); }
   function setTrack(value: Track) { state.save({ track: value }); }
-  function start(title: string, questions: Question[], mode: Session["mode"], minutes?: number, variant?: "A" | "B") {
+  function start(title: string, questions: Question[], mode: Session["mode"], minutes?: number, variant?: "A" | "B", lessonId?: string) {
     if (!questions.length) return;
-    setSession({ id: newId(), title, level: questions[0].level, mode, minutes, variant, questions,
+    setSession({ id: newId(), title, level: questions[0].level, mode, minutes, variant, lessonId, questions,
       subtitle: mode === "practice" ? "Сразу после ответа — ключ и короткое объяснение." : "Ответы и разбор открываются после сдачи. Пропуски входят в результат." });
     window.scrollTo({ top: 0, behavior: "instant" });
+  }
+  function startLesson(item: Lesson) {
+    const questions = item.questionIds.map((id) => questionsById.get(id)).filter((question) => question !== undefined);
+    if (questions.length !== item.questionIds.length) return;
+    start(`${item.level} · ${item.title}`, questions, "practice", undefined, undefined, item.id);
   }
   function startD0() { start("D0 · Входная диагностика", diagnostic, "diagnostic", 15); }
   function startPractice(items: Question[], title: string) {
@@ -125,7 +139,7 @@ export default function Studio({ account }: { account: Account | null }) {
                 <div className="eyebrow"><span className="signal" /> СТУДИЯ НЕМЕЦКОГО · A1–C1</div>
                 <h1>Deutsch<br /><em>zu zweit.</em></h1>
                 <p>Учите немецкий в своём темпе, выбирайте темы по интересам и встречайтесь на общих контрольных.</p>
-                <div className="actions"><button className="primary" onClick={() => hasD0 ? startPractice(activeQuestions, `${level} · Практика`) : startD0()}>{hasD0 ? "Продолжить тренировку" : "Начать диагностику"} <Icon name="arrow" size={17} /></button><button className="secondary" onClick={() => go("route")}>Открыть маршрут</button></div>
+                <div className="actions"><button className="primary" onClick={() => hasD0 ? startPractice(activeQuestions, `${level} · Практика`) : startD0()}>{hasD0 ? "Продолжить тренировку" : "Начать диагностику"} <Icon name="arrow" size={17} /></button><button className="secondary" onClick={() => go("lessons")}>Открыть уроки</button></div>
               </div>
               <div className="hero-art" aria-label="Альфи и кавалер-кинг-чарльз-спаниель — маскоты студии">
                 <div className="orbit one" /><div className="orbit two" /><div className="orbit three" />
@@ -155,7 +169,7 @@ export default function Studio({ account }: { account: Account | null }) {
           </>}
           {page === "route" && <>
             <SectionHead code="KAMPAGNE / 01" title="Твой маршрут" detail="Общая программа A1–C1 и две ветки практики. Контрольные даты уточняются по результатам." />
-            <section className="panel"><LevelStrip level={level} change={setLevel} /><div className="panel-head stage-detail"><div><div className="eyebrow">{stage.calendar} · {stage.german} НЕМЕЦКОГО В ЗАНЯТИЯХ</div><h2>{level} · {stage.title}</h2><p>{stage.subtitle}</p></div><button className="primary" onClick={() => go("practice")}>Тренировать {level} <Icon name="arrow" size={17} /></button></div>
+            <section className="panel"><LevelStrip level={level} change={setLevel} /><div className="panel-head stage-detail"><div><div className="eyebrow">{stage.calendar} · {stage.german} НЕМЕЦКОГО В ЗАНЯТИЯХ</div><h2>{level} · {stage.title}</h2><p>{stage.subtitle}</p></div><button className="primary" onClick={() => go("lessons")}>К урокам <Icon name="arrow" size={17} /></button></div>
               <div className="lesson-grid"><Detail name="Грамматика">{stage.grammar}</Detail><Detail name="Активный словарь">{stage.active}</Detail><Detail name="Пассивный словарь">{stage.passive}</Detail><Detail name="Контроль">{stage.gate}</Detail></div>
             </section>
             <section className="panel"><div className="eyebrow">ТЕМАТИЧЕСКАЯ ВЕТКА</div><TrackSelect track={track} change={setTrack} /><div className="stage-note"><div><strong>{mission.name}</strong><span>{mission.brief}</span></div><button className="secondary" onClick={() => openDuo(level, "A", "track")}>Миссия →</button></div></section>
@@ -165,6 +179,9 @@ export default function Studio({ account }: { account: Account | null }) {
               <section className="panel"><h2>Контрольные точки</h2>{checkpoints.map((checkpoint) => <div className="record" key={checkpoint.title}><div><small>{checkpoint.when}</small><strong>{checkpoint.title}</strong><p>{checkpoint.note}</p></div></div>)}<a href="/materialien/roadmap.md" className="text-link" download>Скачать подробную карту <Icon name="download" size={17} /></a></section>
             </div>
           </>}
+          {page === "lessons" && (lesson
+            ? <LessonPage key={lesson.id} lesson={lesson} records={state.records} save={state.save} start={() => startLesson(lesson)} />
+            : <LessonCatalog records={state.records} activeLevel={level} />)}
           {page === "practice" && <>
             <SectionHead code="TRAINING / 02" title="Тренажёр" detail={`${allQuestions.length} заданий по всем разделам. После ответа сайт показывает ключ и короткий разбор.`} />
             <section className="panel"><div className="panel-head"><div><div className="eyebrow">{tracks[track].tag} · {solved}/{activeQuestions.length} РЕШЕНО</div><h2>Выбери уровень и навык</h2></div></div><LevelStrip level={level} change={(value) => { setLevel(value); setFilter("Все"); }} />

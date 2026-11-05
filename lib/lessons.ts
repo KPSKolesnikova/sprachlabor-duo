@@ -1,6 +1,8 @@
 import { levelOrder, type Level } from "./course";
 import { choice } from "./drills";
 import { grammarLessons } from "./method";
+import { beginnerDrills, beginnerLessons } from "./foundation";
+import type { Stage, Unit } from "./foundation-model";
 
 type LessonSeed = [video: string, focus: string, questions: string[]];
 const curriculum: Record<Level, LessonSeed[]> = {
@@ -44,12 +46,16 @@ const channels: Record<Level, string[]> = {
   C1: ["Benjamin – Der Deutschlehrer", "Benjamin – Der Deutschlehrer", "Deutsch plus", "Arnold Erklärt"],
 };
 
-export const lessons = levelOrder.flatMap((level) => grammarLessons[level].map(([title, theory, example, transfer], index) => {
+export type Lesson = {
+  id: string; level: Level; order: number; title: string; theory: string; example: string; transfer: string;
+  video: string; channel: string; focus: string; questionIds: string[]; stage?: Stage; details?: Unit;
+};
+const upperLevelLessons = levelOrder.filter((level) => level !== "A1" && level !== "A2").flatMap((level) => grammarLessons[level].map(([title, theory, example, transfer], index) => {
   const [video, focus, questionIds] = curriculum[level][index];
   const order = index + 1;
   return { id: `${level.toLowerCase()}-${order}`, level, order, title, theory, example, transfer, video, channel: channels[level][index], focus, questionIds };
 }));
-export type Lesson = typeof lessons[number];
+export const lessons: Lesson[] = [...beginnerLessons, ...upperLevelLessons];
 export const passingAnswers = (count: number) => Math.ceil(count * 0.75);
 
 type Extra = [id: string, level: Level, prompt: string, answer: string, wrong: string, other: string, tip: string];
@@ -88,4 +94,4 @@ const extra: Extra[] = [
   ["c1-mediation-hedge", "C1", "Quelle: „Ein Effekt ist möglich, aber noch nicht nachgewiesen.“ Welcher Satz gibt das korrekt wieder?", "Die Forschenden halten einen Effekt für möglich. Ein Nachweis fehlt noch.", "Die Forschenden weisen einen Effekt nach.", "Die Forschenden schließen einen Effekt aus.", "Пересказ сохраняет осторожность источника и статус доказательств."],
   ["c1-mediation-source", "C1", "Wie trennst du einen Bericht von deinem Kommentar?", "Laut Bericht sinkt die Wartezeit. Ich halte eine weitere Prüfung für sinnvoll.", "Die Wartezeit sinkt eindeutig, deshalb ist meine Empfehlung erwiesen.", "Der Bericht fordert eine weitere Prüfung, obwohl ich sie vorgeschlagen habe.", "Laut Bericht маркирует источник. Ich halte маркирует собственное суждение."],
 ];
-export const lessonDrills = extra.map(([id, level, prompt, answer, wrong, other, tip]) => choice(`lesson-${id}`, level, "Grammatik", [prompt, answer, wrong, other, tip]));
+export const lessonDrills = [...extra.map(([id, level, prompt, answer, wrong, other, tip]) => choice(`lesson-${id}`, level, "Grammatik", [prompt, answer, wrong, other, tip])), ...beginnerDrills];

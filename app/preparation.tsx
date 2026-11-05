@@ -8,13 +8,13 @@ import { grammarLessons, methodSources } from "../lib/method";
 import { dateKey, displayDate, later, newId, values, type FullMock, type Lexeme, type Records } from "./state";
 import { Icon } from "./ui";
 
-export function Method({ level }: { level: Level }) {
+export function Method({ level, showGrammar = true }: { level: Level; showGrammar?: boolean }) {
   return <>
-    <section className="panel">
+    {showGrammar && <section className="panel">
       <div className="eyebrow">GRAMMATIK / {level}</div><h2>Разбор конструкций</h2>
       <p className="muted">Сначала распознай форму в примере. Затем объясни выбор, составь свою фразу и проверь перенос в новом диалоге.</p>
       {grammarLessons[level].map(([topic, rule, example, task]) => <details className="work-item" key={topic}><summary><strong>{topic}</strong><span className="pill">Правило и практика</span></summary><div className="work-content"><p>{rule}</p><blockquote lang="de">{example}</blockquote><p className="hint"><strong>Проверь себя.</strong> {task}</p></div></details>)}
-    </section>
+    </section>}
     <section className="panel"><div className="eyebrow">METHODE / 40 MIN</div><h2>Как провести занятие вдвоём</h2>
       <ol className="compact-list"><li><strong>5 мин.</strong> Вспомни старое без подсказки.</li><li><strong>8 мин.</strong> Прочитай или прослушай новый материал, выдели смысл и детали.</li><li><strong>7 мин.</strong> Найди конструкцию и реши 4–6 закрытых заданий.</li><li><strong>12 мин.</strong> Выполните реальную задачу с разной исходной информацией, затем передайте итог своими словами.</li><li><strong>5 мин.</strong> Дай партнёрше подсказку для самокоррекции и покажи один образец.</li><li><strong>3 мин.</strong> Запиши следующий шаг. Через 2–7 дней проверь то же действие на новой теме.</li></ol>
       <p className="muted">Действие, взаимодействие и медиация опираются на CEFR и Goethe DLL. Длительность блоков, интервалы карточек и контрольные пороги — настройки этой программы.</p>

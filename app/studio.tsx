@@ -136,7 +136,7 @@ export default function Studio({ account }: { account: Account | null }) {
           {page === "home" && <>
             <section className="hero">
               <div className="hero-copy">
-                <div className="eyebrow"><span className="signal" /> СТУДИЯ НЕМЕЦКОГО · A1–C1</div>
+                <div className="eyebrow"><span className="signal" /> КУРС A1–A2 · ПРАКТИКА A1–C1</div>
                 <h1>Deutsch<br /><em>zu zweit.</em></h1>
                 <p>Учите немецкий в своём темпе, выбирайте темы по интересам и встречайтесь на общих контрольных.</p>
                 <div className="actions"><button className="primary" onClick={() => hasD0 ? startPractice(activeQuestions, `${level} · Практика`) : startD0()}>{hasD0 ? "Продолжить тренировку" : "Начать диагностику"} <Icon name="arrow" size={17} /></button><button className="secondary" onClick={() => go("lessons")}>Открыть уроки</button></div>
@@ -173,7 +173,7 @@ export default function Studio({ account }: { account: Account | null }) {
               <div className="lesson-grid"><Detail name="Грамматика">{stage.grammar}</Detail><Detail name="Активный словарь">{stage.active}</Detail><Detail name="Пассивный словарь">{stage.passive}</Detail><Detail name="Контроль">{stage.gate}</Detail></div>
             </section>
             <section className="panel"><div className="eyebrow">ТЕМАТИЧЕСКАЯ ВЕТКА</div><TrackSelect track={track} change={setTrack} /><div className="stage-note"><div><strong>{mission.name}</strong><span>{mission.brief}</span></div><button className="secondary" onClick={() => openDuo(level, "A", "track")}>Миссия →</button></div></section>
-            <Method level={level} />
+            <Method level={level} showGrammar={level !== "A1" && level !== "A2"} />
             <div className="two-column">
               <section className="panel"><h2>Недельный ритм</h2>{week.map((day) => <div className="schedule-row" key={day.day}><span className="day">{day.day}</span><div><strong>{day.task}</strong><small>{day.output}</small></div><span className="muted">{day.minutes ? `${day.minutes} мин` : "—"}</span></div>)}</section>
               <section className="panel"><h2>Контрольные точки</h2>{checkpoints.map((checkpoint) => <div className="record" key={checkpoint.title}><div><small>{checkpoint.when}</small><strong>{checkpoint.title}</strong><p>{checkpoint.note}</p></div></div>)}<a href="/materialien/roadmap.md" className="text-link" download>Скачать подробную карту <Icon name="download" size={17} /></a></section>
@@ -181,7 +181,7 @@ export default function Studio({ account }: { account: Account | null }) {
           </>}
           {page === "lessons" && (lesson
             ? <LessonPage key={lesson.id} lesson={lesson} records={state.records} save={state.save} start={() => startLesson(lesson)} />
-            : <LessonCatalog records={state.records} activeLevel={level} />)}
+            : <LessonCatalog records={state.records} activeLevel={level} openExams={(target) => { setLevel(target); go("exams"); }} />)}
           {page === "practice" && <>
             <SectionHead code="TRAINING / 02" title="Тренажёр" detail={`${allQuestions.length} заданий по всем разделам. После ответа сайт показывает ключ и короткий разбор.`} />
             <section className="panel"><div className="panel-head"><div><div className="eyebrow">{tracks[track].tag} · {solved}/{activeQuestions.length} РЕШЕНО</div><h2>Выбери уровень и навык</h2></div></div><LevelStrip level={level} change={(value) => { setLevel(value); setFilter("Все"); }} />
